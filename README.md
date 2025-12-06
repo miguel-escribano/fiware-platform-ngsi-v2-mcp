@@ -307,9 +307,9 @@ The project demonstrates how AI assistants can interact with FIWARE-based IoT pl
 This project builds upon the original work by [dncampo](https://github.com/dncampo/FIWARE-MCP-Server).
 
 Special thanks to:
-- **Alberto Abella** (<alberto.abella@fiware.org>) - FIWARE Foundation
-- **Jorge Antonio Osuna Pons** (<josuna@mb3-gestion.com>) - [MB3 Gestión](https://mb3-gestion.com/)
-- **Pedro Pablo Álvarez Jaramillo** (<ppalvarez@mb3-gestion.com>) - [MB3 Gestión](https://mb3-gestion.com/)
 - **Oscar Rived** (<oscar@larraby.com>) - [Larraby](https://www.larraby.com/)
+- **Pedro Pablo Álvarez Jaramillo** (<ppalvarez@mb3-gestion.com>) - [MB3 Gestión](https://mb3-gestion.com/)
+- **Jorge Antonio Osuna Pons** (<josuna@mb3-gestion.com>) - [MB3 Gestión](https://mb3-gestion.com/)
+- **Alberto Abella** (<alberto.abella@fiware.org>) - FIWARE Foundation
 
 Their expertise and support in FIWARE platforms and Smart Data Models integration made this project possible.
