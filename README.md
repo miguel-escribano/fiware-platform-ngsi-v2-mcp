@@ -16,11 +16,11 @@ An MCP (Model Context Protocol) server for FIWARE NGSI-v2 Context Broker with Sm
 
 ## ✨ Features
 
-- **Smart Data Models Integration**: Direct access to official FIWARE data model schemas for standardized entity creation
-- **3 MCP Tools**: Context Broker operations, generic FIWARE API requests, and Smart Data Models lookup
+- **Smart Data Models Integration**: Discover, fetch, and convert official FIWARE data model schemas with automatic NGSI-v2 type mapping
+- **4 MCP Tools**: Context Broker operations, generic FIWARE API requests, Smart Data Models discovery and lookup
 - **1 MCP Resource**: Comprehensive API examples collection with real request/response patterns
 - **3 MCP Prompts**: Guided workflows for creating entities, querying data, and using Smart Data Models
-- **OAuth Authentication**: OpenStack Keystone integration for enterprise FIWARE platforms
+- **OAuth Authentication**: OpenStack Keystone integration with automatic token refresh
 - **NGSI-v2 API**: Full support for FIWARE NGSI-v2 specification
 
 
@@ -40,9 +40,9 @@ This fork adapts the original NGSI-LD implementation to work with NGSI-v2 APIs a
 | Original | This Fork |
 |----------|-----------|
 | NGSI-LD (`/ngsi-ld/v1/`) | NGSI-v2 (`/v2/`) |
-| No authentication | OpenStack Keystone OAuth |
-| 5 specific tools | 3 tools + 1 resource + 3 prompts |
-| No Smart Data Models | Smart Data Models integration |
+| No authentication | OpenStack Keystone OAuth with auto-refresh |
+| 5 specific tools | 4 tools + 1 resource + 3 prompts |
+| No Smart Data Models | Smart Data Models with auto type mapping |
 
 ---
 
@@ -117,26 +117,39 @@ To use your MCP server with external APIs (e.g., OpenAI Responses API) or share 
 |------|-------------|
 | `CB_version()` | Returns the Context Broker version (useful for connection testing) |
 | `fiware_request(method, endpoint, body)` | Executes any NGSI-v2 API call with automatic authentication |
-| `get_smart_data_model(domain, model)` | Fetches FIWARE Smart Data Model schemas from official repository |
+| `list_smart_data_model_domains()` | Lists all available Smart Data Model domains and their common models |
+| `get_smart_data_model(domain, model)` | Fetches complete schema with NGSI-v2 conversion examples |
 
 The generic `fiware_request` tool gives you full access to the NGSI-v2 API without needing dedicated tools for each operation.
 
-#### Smart Data Models Tool
+#### Smart Data Models Tools
 
-The `get_smart_data_model` tool helps you create FIWARE-compliant entities by fetching official data model schemas:
-
+**Discover available models:**
 ```python
-# Get AirQualityObserved model
-get_smart_data_model("Environment", "AirQualityObserved")
-
-# Get WeatherObserved model
-get_smart_data_model("Weather", "WeatherObserved")
-
-# Get Alert model
-get_smart_data_model("Alert", "Alert")
+# List all domains and their models
+list_smart_data_model_domains()
+# Returns: Environment, Weather, Alert, Building, Transportation, etc.
 ```
 
-**Common domains**: Environment, Weather, Alert, Building, Transportation, UrbanMobility, WasteManagement, Streetlighting, Energy, ParksAndGardens
+**Get detailed schema with NGSI-v2 conversion:**
+```python
+# Get complete schema with conversion examples
+get_smart_data_model("Environment", "AirQualityObserved")
+
+# Returns:
+# - All properties with NGSI-v2 type mapping
+# - Required fields
+# - NGSI-v2 conversion example
+# - Official example (if available)
+# - Links to documentation
+```
+
+**Key improvements:**
+- ✅ Automatic type mapping (string → Text, number → Number, etc.)
+- ✅ Special handling for geo properties (location → geo:json)
+- ✅ Complete property list (not limited to 15)
+- ✅ NGSI-v2 conversion examples generated from schema
+- ✅ Required fields highlighted
 
 **Learn more**: https://smartdatamodels.org/
 

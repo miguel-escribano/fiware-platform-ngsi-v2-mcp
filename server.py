@@ -319,24 +319,60 @@ def fiware_request(method: str, endpoint: str, body: dict = None) -> str:
 
 
 @mcp.tool()
-def get_smart_data_model(domain: str, model: str) -> str:
+def list_smart_data_model_domains() -> str:
     """
-    Get FIWARE Smart Data Model schema and examples from official repository.
-    
-    Args:
-        domain: Data model domain (e.g., "Environment", "Weather", "Alert", "Building")
-        model: Model name (e.g., "AirQualityObserved", "WeatherObserved", "Alert")
+    List available Smart Data Model domains with common models.
     
     Returns:
-        JSON with schema information and NGSI-v2 conversion guide
+        JSON with available domains and their most common models
+    
+    Use this to discover what domains and models are available before calling get_smart_data_model()
+    """
+    domains = {
+        "Environment": ["AirQualityObserved", "NoiseLevelObserved", "WaterQualityObserved"],
+        "Weather": ["WeatherObserved", "WeatherForecast", "WeatherAlert"],
+        "Alert": ["Alert", "Anomaly"],
+        "Building": ["Building", "BuildingOperation"],
+        "Transportation": ["TrafficFlowObserved", "Road", "Vehicle"],
+        "UrbanMobility": ["GtfsStop", "GtfsRoute", "PublicTransportStop"],
+        "WasteManagement": ["WasteContainer", "WasteContainerIsle"],
+        "Streetlighting": ["Streetlight", "StreetlightGroup", "StreetlightControlCabinet"],
+        "Energy": ["Device", "ThreePhaseAcMeasurement"],
+        "ParksAndGardens": ["Garden", "GreenspaceRecord"],
+        "PointOfInterest": ["PointOfInterest", "Beach", "Museum"],
+        "Parking": ["ParkingSpot", "ParkingGroup", "OffStreetParking"],
+        "Device": ["Device", "DeviceModel"],
+        "AgriFood": ["AgriCrop", "AgriParcel", "AgriGreenhouse"],
+        "WaterNetwork": ["WaterQualityObserved", "WaterConsumptionObserved"]
+    }
+    
+    return json.dumps({
+        "success": True,
+        "total_domains": len(domains),
+        "domains": domains,
+        "usage": "Use get_smart_data_model(domain, model) to get full schema",
+        "example": "get_smart_data_model('Environment', 'AirQualityObserved')",
+        "browse_all": "https://github.com/smart-data-models"
+    }, indent=2)
+
+
+@mcp.tool()
+def get_smart_data_model(domain: str, model: str) -> str:
+    """
+    Get FIWARE Smart Data Model schema with NGSI-v2 conversion examples.
+    
+    Args:
+        domain: Data model domain (e.g., "Environment", "Weather", "Alert")
+        model: Model name (e.g., "AirQualityObserved", "WeatherObserved")
+    
+    Returns:
+        Complete schema with properties, required fields, and NGSI-v2 conversion examples
     
     Examples:
         get_smart_data_model("Environment", "AirQualityObserved")
         get_smart_data_model("Weather", "WeatherObserved")
-        get_smart_data_model("Alert", "Alert")
     
-    Common domains: Environment, Weather, Alert, Building, Transportation, 
-                    UrbanMobility, WasteManagement, Streetlighting, Energy
+    Tip: Use list_smart_data_model_domains() first to see available options
     """
     try:
         # Fetch schema from GitHub
@@ -346,8 +382,9 @@ def get_smart_data_model(domain: str, model: str) -> str:
         if response.status_code == 404:
             return json.dumps({
                 "error": "Model not found",
-                "hint": f"Check domain '{domain}' and model '{model}' at https://github.com/smart-data-models",
-                "common_domains": ["Environment", "Weather", "Alert", "Building", "Transportation"]
+                "hint": f"Domain '{domain}' or model '{model}' doesn't exist",
+                "suggestion": "Use list_smart_data_model_domains() to see available options",
+                "browse": "https://github.com/smart-data-models"
             }, indent=2)
         
         response.raise_for_status()
@@ -365,15 +402,46 @@ def get_smart_data_model(domain: str, model: str) -> str:
         else:
             properties = schema.get("properties", {})
         
+        # Build comprehensive property list with NGSI-v2 type mapping
         property_list = []
-        for prop_name, prop_def in list(properties.items())[:15]:  # First 15
+        type_mapping = {
+            "string": "Text",
+            "number": "Number",
+            "integer": "Number",
+            "boolean": "Boolean",
+            "array": "StructuredValue",
+            "object": "StructuredValue"
+        }
+        
+        for prop_name, prop_def in properties.items():
             prop_type = prop_def.get("type", "unknown")
-            prop_desc = prop_def.get("description", "")[:60] if prop_def.get("description") else ""
+            ngsi_type = type_mapping.get(prop_type, "Text")
+            
+            # Special handling for geo properties
+            if "geo" in prop_name.lower() or prop_name in ["location", "address"]:
+                ngsi_type = "geo:json" if prop_type == "object" else "Text"
+            
             property_list.append({
                 "name": prop_name,
-                "type": prop_type,
-                "description": prop_desc
+                "schema_type": prop_type,
+                "ngsi_v2_type": ngsi_type,
+                "description": prop_def.get("description", "")[:100]
             })
+        
+        # Generate NGSI-v2 conversion example
+        required_fields = schema.get("required", [])
+        conversion_example = {
+            "id": f"urn:ngsi-ld:{model}:001",
+            "type": model
+        }
+        
+        # Add a few example attributes
+        for prop in property_list[:3]:
+            if prop["name"] not in ["id", "type"]:
+                conversion_example[prop["name"]] = {
+                    "type": prop["ngsi_v2_type"],
+                    "value": "<your_value_here>"
+                }
         
         result = {
             "success": True,
@@ -382,17 +450,26 @@ def get_smart_data_model(domain: str, model: str) -> str:
             "schema": {
                 "title": schema.get("title", ""),
                 "description": schema.get("description", ""),
-                "required": schema.get("required", []),
+                "required": required_fields,
+                "total_properties": len(property_list),
                 "properties": property_list
             },
-            "example": example,
-            "ngsi_v2_note": "Convert properties to NGSI-v2 format: {'value': X, 'type': 'Number|Text|DateTime|geo:json'}",
-            "github_url": f"https://github.com/smart-data-models/dataModel.{domain}/tree/master/{model}"
+            "ngsi_v2_conversion": {
+                "note": "Convert each property to NGSI-v2 attribute format",
+                "example": conversion_example,
+                "required_fields": required_fields
+            },
+            "official_example": example,
+            "links": {
+                "schema": schema_url,
+                "github": f"https://github.com/smart-data-models/dataModel.{domain}/tree/master/{model}",
+                "spec": f"https://github.com/smart-data-models/dataModel.{domain}/blob/master/{model}/doc/spec.md"
+            }
         }
         
         return json.dumps(result, indent=2)
     except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return json.dumps({"error": str(e), "hint": "Check domain and model names"}, indent=2)
 
 
 if __name__ == "__main__":
