@@ -6,6 +6,9 @@
 [![FIWARE](https://img.shields.io/badge/FIWARE-NGSI--v2-orange.svg)](https://fiware.org/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 
+> **⚠️ Early Version Notice**  
+> This is a first version developed through AI-assisted coding (vibe coding). While functional, there may be inconsistencies or areas for improvement. I'm not a professional developer, but I'm committed to learning and improving this project. Feedback, suggestions, and contributions are very welcome! Feel free to open issues or reach out.
+
 An MCP (Model Context Protocol) server for FIWARE NGSI-v2 Context Broker with Smart Data Models lookup and OpenStack Keystone OAuth authentication. This server enables AI assistants like Claude Desktop and Cursor to interact with FIWARE platforms while ensuring compliance with standardized, interoperable data models.
 
 Forked from [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Server) (NGSI-LD, no auth).
