@@ -5,7 +5,7 @@ An MCP (Model Context Protocol) server for FIWARE NGSI-v2 Context Broker with Sm
 Forked from [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Server) (NGSI-LD, no auth).
 
 
-## Features
+## ✨ Features
 
 - **Smart Data Models Integration**: Direct access to official FIWARE data model schemas for standardized entity creation
 - **3 MCP Tools**: Context Broker operations, generic FIWARE API requests, and Smart Data Models lookup
@@ -15,7 +15,7 @@ Forked from [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Se
 - **NGSI-v2 API**: Full support for FIWARE NGSI-v2 specification
 
 
-## Installation
+## 📦 Installation
 
 See the [Integration](#integration) section below for step-by-step instructions.
 
@@ -33,7 +33,7 @@ This fork adapts the original NGSI-LD implementation to work with NGSI-v2 APIs a
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
 # Install dependencies
@@ -69,7 +69,7 @@ python server.py --http --port 5001
 ```
 
 
-## Available Tools & Resources
+## 🔧 Available Tools & Resources
 
 ### Tools
 
@@ -118,7 +118,7 @@ The resource contains a comprehensive collection of FIWARE API examples that AI 
 
 Prompts provide guided workflows that leverage the available tools and resources.
 
-## Usage Examples
+## 💡 Usage Examples
 
 **List all entities:**
 ```python
@@ -151,7 +151,7 @@ fiware_request("PATCH", "/v2/entities/Room:001/attrs", {
 fiware_request("DELETE", "/v2/entities/Room:001")
 ```
 
-## Integration
+## ⚙️ Integration
 
 ### Claude Desktop
 
@@ -319,7 +319,7 @@ This MCP server was developed as a **Proof of Concept (PoC)** within the [TwIN L
 
 The project demonstrates how AI assistants can interact with FIWARE-based IoT platforms while ensuring compliance with Smart Data Models standards, facilitating the creation of interoperable territorial digital twins.
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 This project builds upon the original work by [dncampo](https://github.com/dncampo/FIWARE-MCP-Server).
 
