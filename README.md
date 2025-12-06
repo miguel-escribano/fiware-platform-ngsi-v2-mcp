@@ -328,6 +328,19 @@ You can also add this to `.vscode/settings.json` in your project root for worksp
 - Access to a FIWARE Context Broker (Orion) with NGSI-v2 API
 - OpenStack Keystone credentials (if authentication is enabled on your platform)
 
+## Error Handling
+
+The server includes comprehensive error handling for:
+
+- **Authentication failures**: Automatic token refresh on 401 responses
+- **Network connectivity issues**: Timeout handling and connection error recovery
+- **Invalid API responses**: Graceful handling of malformed JSON and HTTP errors
+- **Missing resources**: Clear error messages with helpful hints (e.g., 404 suggestions)
+- **Smart Data Model lookup failures**: Domain/model validation with common suggestions
+- **File operations**: Safe handling of missing Postman collection files
+
+All tools return structured JSON responses with `success`, `error`, and `hint` fields to help diagnose issues.
+
 ## License
 
 Apache-2.0 (same as original)
