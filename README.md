@@ -17,6 +17,10 @@ Forked from [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Se
 
 ## 📦 Installation
 
+This MCP server is designed for **local deployment** with your own FIWARE infrastructure and credentials. It connects to your specific Context Broker instance using your authentication details.
+
+**Available on Smithery**: You can find this server in the [Smithery MCP Registry](https://smithery.ai), but it requires local installation and configuration with your FIWARE credentials.
+
 See the [Integration](#integration) section below for step-by-step instructions.
 
 
@@ -35,7 +39,13 @@ This fork adapts the original NGSI-LD implementation to work with NGSI-v2 APIs a
 
 ## 🚀 Quick Start
 
+> **Note:** This server requires local installation with your own FIWARE infrastructure. It is not a hosted service.
+
 ```bash
+# Clone the repository
+git clone https://github.com/miguel-escribano/FIWARE-MCP-Server.git
+cd FIWARE-MCP-Server
+
 # Install dependencies
 pip install -r requirements.txt
 
