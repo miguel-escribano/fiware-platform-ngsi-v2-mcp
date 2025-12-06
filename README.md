@@ -17,10 +17,15 @@ Forked from [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Se
 
 ## One-Click Install
 
-[![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=fiware-ngsi-v2&config=eyJjb21tYW5kIjoicHl0aG9uIiwiYXJncyI6WyJzZXJ2ZXIucHkiXSwiZW52Ijp7IkFVVEhfSE9TVCI6IllPVVJfS0VZU1RPTkVfSE9TVCIsIkFVVEhfUE9SVCI6IjE1MDAxIiwiQ0JfSE9TVCI6IllPVVJfQ09OVEVYVF9CUk9LRVJfSE9TVCIsIkNCX1BPUlQiOiIxMDI2IiwiVVNFUk5BTUUiOiJZT1VSX1VTRVJOQU1FIiwiUEFTU1dPUkQiOiJZT1VSX1BBU1NXT1JEIiwiU0VSVklDRSI6IllPVVJfU0VSVklDRSIsIlNVQlNFUlZJQ0UiOiIvWU9VUl9TVUJTRVJWSUNFIn19)
-[![Install in VS Code](https://img.shields.io/badge/VS_Code-Install_FIWARE_MCP-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](vscode:mcp/install?name=fiware-ngsi-v2&config=%7B%22command%22%3A%22python%22%2C%22args%22%3A%5B%22server.py%22%5D%2C%22env%22%3A%7B%22AUTH_HOST%22%3A%22YOUR_KEYSTONE_HOST%22%2C%22CB_HOST%22%3A%22YOUR_CONTEXT_BROKER_HOST%22%2C%22USERNAME%22%3A%22YOUR_USERNAME%22%2C%22PASSWORD%22%3A%22YOUR_PASSWORD%22%2C%22SERVICE%22%3A%22YOUR_SERVICE%22%2C%22SUBSERVICE%22%3A%22%2FYOUR_SUBSERVICE%22%7D%7D)
+> **Note:** These buttons provide a quick way to add the server configuration to your IDE. You'll still need to:
+> 1. Clone this repository
+> 2. Install dependencies: `pip install -r requirements.txt`
+> 3. Create `.env` file with your credentials (see `.env.example`)
+> 4. Update the path to `server.py` in your MCP configuration
 
-> **Note:** After clicking, update the placeholder values (`YOUR_*`) with your actual FIWARE credentials in the MCP settings.
+[![Install in Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](cursor://anysphere.cursor-deeplink/mcp/install?name=fiware-ngsi-v2&config=eyJjb21tYW5kIjoicHl0aG9uIiwiYXJncyI6WyIvcGF0aC90by9zZXJ2ZXIucHkiXX0%3D)
+
+For manual installation, see the [Integration](#integration) section below.
 
 
 ## What's Different
