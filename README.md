@@ -1,6 +1,5 @@
 # FIWARE MCP Server with Smart Data Models Integration
 
-[![smithery badge](https://smithery.ai/badge/@miguel-escribano/fiware-mcp-server)](https://smithery.ai/server/@miguel-escribano/fiware-mcp-server)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![FIWARE](https://img.shields.io/badge/FIWARE-NGSI--v2-orange.svg)](https://fiware.org/)
