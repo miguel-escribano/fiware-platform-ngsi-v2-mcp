@@ -11,7 +11,7 @@
 
 An MCP (Model Context Protocol) server for FIWARE NGSI-v2 Context Broker with Smart Data Models lookup and OpenStack Keystone OAuth authentication. This server enables AI assistants like Claude Desktop and Cursor to interact with FIWARE platforms while ensuring compliance with standardized, interoperable data models.
 
-**Forked from** [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Server) (NGSI-LD, no auth) · [See Credits](#-acknowledgments)
+**Forked from** [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Server) (NGSI-LD, no auth) · [See Acknowledgments](#-acknowledgments)
 
 
 ## ✨ Features
