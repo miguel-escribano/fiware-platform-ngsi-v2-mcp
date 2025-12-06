@@ -87,6 +87,27 @@ python server.py
 python server.py --http --port 5001
 ```
 
+### Exposing via ngrok (HTTP mode)
+
+To use your MCP server with external APIs (e.g., OpenAI Responses API) or share it temporarily, you can expose it via ngrok:
+
+1. **Sign up** at [ngrok.com](https://ngrok.com) and install the client
+2. **Add your auth token**:
+   ```bash
+   ngrok config add-authtoken <YOUR_AUTH_TOKEN>
+   ```
+3. **Start your MCP server** in HTTP mode (if not already running):
+   ```bash
+   python server.py --http --host 127.0.0.1 --port 5001
+   ```
+4. **Start ngrok tunnel**:
+   ```bash
+   ngrok http http://127.0.0.1:5001
+   ```
+5. **Access your MCP endpoint** at: `{PUBLIC_URL}/mcp`
+
+> **Security Note**: Keep your auth token secure. The public URL is active only while ngrok is running.
+
 
 ## 🔧 Available Tools & Resources
 
