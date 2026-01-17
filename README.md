@@ -227,11 +227,14 @@ Config file location:
   "mcpServers": {
     "fiware": {
       "command": "python",
-      "args": ["/path/to/server.py"]
+      "args": ["/path/to/server.py"],
+      "env": {}
     }
   }
 }
 ```
+
+**Note:** Configuration is read from the `.env` file in the server directory (see Configuration section above).
 
 ### Cursor
 
@@ -242,7 +245,31 @@ Add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "fiware": {
       "command": "python",
-      "args": ["/path/to/server.py"]
+      "args": ["/path/to/server.py"],
+      "env": {}
+    }
+  }
+}
+```
+
+**Note:** This server reads configuration from the `.env` file in its directory. Make sure you've created and configured `.env` as shown in the Configuration section above.
+
+**Alternative:** You can pass environment variables directly in the JSON instead of using `.env`:
+
+```json
+{
+  "mcpServers": {
+    "fiware": {
+      "command": "python",
+      "args": ["/path/to/server.py"],
+      "env": {
+        "AUTH_TYPE": "oauth",
+        "CB_HOST": "your-context-broker-host",
+        "FIWARE_USERNAME": "your_username",
+        "FIWARE_PASSWORD": "your_password",
+        "SERVICE": "your_service",
+        "SUBSERVICE": "/your_subservice"
+      }
     }
   }
 }
@@ -275,7 +302,9 @@ Install the [MCP extension](https://marketplace.visualstudio.com/items?itemName=
 }
 ```
 
-Credentials are read from `.env` file. Do not commit credentials to version control.
+**Note:** The VS Code approach above shows environment variables in `settings.json`. Alternatively, you can use an empty `"env": {}` and rely on the `.env` file in the server directory (recommended to avoid storing credentials in VS Code settings).
+
+Do not commit credentials to version control.
 
 ---
 
