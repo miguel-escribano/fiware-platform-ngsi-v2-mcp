@@ -10,7 +10,7 @@
 
 An MCP (Model Context Protocol) server for the complete FIWARE platform stack. Enables AI assistants like Claude Desktop and Cursor to interact with Context Broker (Orion), STH-Comet, Perseo CEP, and IoT Agents — all through the NGSI-v2 API.
 
-**Works with any FIWARE deployment**: Telefonica IoT Platform, Linode, local Docker, or any NGSI-v2 compatible setup.
+**Works with any FIWARE deployment**: cloud platforms, self-hosted servers, local Docker, or any NGSI-v2 compatible setup.
 
 
 ## ✨ Features
