@@ -299,12 +299,18 @@ def sth_get_history(entity_type: str, entity_id: str, attribute: str,
         if response.ok:
             result["data"] = data
             # Extract values count if available
+            values_count = 0
             if data and "contextResponses" in data:
                 try:
                     values = data["contextResponses"][0]["contextElement"]["attributes"][0]["values"]
-                    result["values_count"] = len(values)
+                    values_count = len(values)
+                    result["values_count"] = values_count
                 except:
                     pass
+            
+            # Add helpful note when no data found
+            if values_count == 0:
+                result["note"] = "No historical data found. This is normal if: (1) No data has been collected yet, (2) Subscriptions to STH-Comet are not configured, or (3) The time range has no data. Create subscriptions to start collecting historical data."
         else:
             result["error"] = data or response.reason
         
@@ -364,6 +370,14 @@ def sth_get_aggregation(entity_type: str, entity_id: str, attribute: str,
         
         if response.ok:
             result["data"] = data
+            # Check if aggregation returned empty results
+            if data and "contextResponses" in data:
+                try:
+                    values = data["contextResponses"][0]["contextElement"]["attributes"][0]["values"]
+                    if len(values) == 0:
+                        result["note"] = "No aggregated data found. This is normal if: (1) No data has been collected yet, (2) Subscriptions to STH-Comet are not configured, or (3) The time range has no data. Create subscriptions to start collecting historical data."
+                except:
+                    pass
         else:
             result["error"] = data or response.reason
         
@@ -458,13 +472,21 @@ def cep_create_rule(name: str, epl_text: str, action_type: str, action_params: d
         except:
             data = response.text
         
-        return json.dumps({
+        result = {
             "success": response.ok,
             "status_code": response.status_code,
             "rule_name": name,
             "data": data if response.ok else None,
             "error": data if not response.ok else None
-        }, indent=2)
+        }
+        
+        # Add helpful hint for common errors
+        if not response.ok and data:
+            error_str = str(data).lower()
+            if "rule exists" in error_str or "already exists" in error_str:
+                result["hint"] = f"Rule '{name}' already exists. This may indicate a shared Perseo CEP backend. Use cep_list_rules() to see all rules, or cep_delete_rule('{name}') to remove it first."
+        
+        return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
 
@@ -588,7 +610,15 @@ def iota_register_device(device_id: str, entity_name: str, entity_type: str,
             "device_id": device_id,
             "data": data if response.ok else None,
             "error": data if not response.ok else None
-        }, indent=2)
+        }
+        
+        # Add helpful hint for common errors
+        if not response.ok and data:
+            error_str = str(data).lower()
+            if "already exists" in error_str:
+                result["hint"] = f"Device '{device_id}' already exists. This may indicate a shared IoT Agent backend. Use iota_list_devices() to see all devices, or iota_delete_device('{device_id}') to remove it first."
+        
+        return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
 
