@@ -1,4 +1,4 @@
-# FIWARE MCP Server with Smart Data Models Integration
+# FIWARE Platform MCP Server (NGSI-v2)
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -8,40 +8,35 @@
 > **⚠️ Early Version**  
 > This is a first release. While functional, there may be inconsistencies or areas for improvement. Feedback, suggestions, and contributions are welcome—feel free to open issues or reach out.
 
-An MCP (Model Context Protocol) server for FIWARE NGSI-v2 Context Broker with Smart Data Models lookup and OpenStack Keystone OAuth authentication. This server enables AI assistants like Claude Desktop and Cursor to interact with FIWARE platforms while ensuring compliance with standardized, interoperable data models.
+An MCP (Model Context Protocol) server for the complete FIWARE platform stack. Enables AI assistants like Claude Desktop and Cursor to interact with Context Broker (Orion), STH-Comet, Perseo CEP, and IoT Agents — all through the NGSI-v2 API.
 
-**Forked from** [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Server) (NGSI-LD, no auth) · [See Acknowledgments](#-acknowledgments)
+**Works with any FIWARE deployment**: Telefonica IoT Platform, Linode, local Docker, or any NGSI-v2 compatible setup.
 
 
 ## ✨ Features
 
-- **Smart Data Models Integration**: Discover, fetch, and convert official FIWARE data model schemas with automatic NGSI-v2 type mapping
-- **4 MCP Tools**: Context Broker operations, generic FIWARE API requests, Smart Data Models discovery and lookup
-- **1 MCP Resource**: Comprehensive API examples collection with real request/response patterns
-- **3 MCP Prompts**: Guided workflows for creating entities, querying data, and using Smart Data Models
-- **OAuth Authentication**: OpenStack Keystone integration with automatic token refresh
-- **NGSI-v2 API**: Full support for FIWARE NGSI-v2 specification
+- **Context Broker (Orion)**: Full NGSI-v2 API support for entity management
+- **STH-Comet**: Historical data queries (raw values and aggregations)
+- **Perseo CEP**: Complex Event Processing rules management
+- **IoT Agents**: Device registration and management (UltraLight/JSON protocols)
+- **Smart Data Models**: Discover and use official FIWARE data model schemas
+- **Multi-Auth Support**: OAuth (Telefonica), Basic Auth (Linode), or no auth (local Docker)
+- **12 MCP Tools**: Complete FIWARE platform operations
+- **1 MCP Resource**: API examples collection
 
 
 ## 📦 Installation
 
-This MCP server runs **locally on your machine** and connects to your FIWARE Context Broker (which can be local, remote, or cloud-hosted). It is not a hosted service—you install and run it yourself.
+This MCP server runs **locally on your machine** and connects to your FIWARE platform (which can be local, remote, or cloud-hosted). It is not a hosted service—you install and run it yourself.
 
-**Available on Smithery**: You can find this server in the [Smithery MCP Registry](https://smithery.ai) for easy discovery, but installation and configuration are done locally with your FIWARE credentials.
-
-See the [Integration](#integration) section below for step-by-step instructions.
+See the [Integration](#-integration) section below for step-by-step instructions.
 
 
-## What's Different
+## Why NGSI-v2?
 
-This fork adapts the original NGSI-LD implementation to work with NGSI-v2 APIs and adds enterprise authentication support:
+FIWARE has two API specifications: **NGSI-v2** (classic, widely deployed) and **NGSI-LD** (newer, linked-data based). This server targets NGSI-v2 because it's what most production FIWARE deployments use today, including Telefonica's IoT Platform and many self-hosted installations.
 
-| Original | This Fork |
-|----------|-----------|
-| NGSI-LD (`/ngsi-ld/v1/`) | NGSI-v2 (`/v2/`) |
-| No authentication | OpenStack Keystone OAuth with auto-refresh |
-| 5 specific tools | 4 tools + 1 resource + 3 prompts |
-| No Smart Data Models | Smart Data Models with auto type mapping |
+If you need NGSI-LD support, check out [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Server) which inspired this project.
 
 ---
 
@@ -51,8 +46,8 @@ This fork adapts the original NGSI-LD implementation to work with NGSI-v2 APIs a
 
 ```bash
 # Clone the repository
-git clone https://github.com/miguel-escribano/FIWARE-MCP-Server.git
-cd FIWARE-MCP-Server
+git clone https://github.com/miguel-escribano/fiware-platform-ngsi-v2-mcp.git
+cd fiware-platform-ngsi-v2-mcp
 
 # Install dependencies
 pip install -r requirements.txt
@@ -61,17 +56,31 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` with your FIWARE Context Broker connection details:
+Edit `.env` with your FIWARE platform details (see `.env.example` for all options):
 
 ```env
-AUTH_HOST=your-keystone-host
+# Authentication: oauth (Telefonica), basic (Linode), none (local Docker)
+AUTH_TYPE=oauth
+AUTH_HOST=your-auth-host
 AUTH_PORT=15001
+
+# Context Broker
 CB_HOST=your-context-broker-host
 CB_PORT=1026
-USERNAME=your_username
-PASSWORD=your_password
+CB_PROTOCOL=https
+
+# Credentials
+FIWARE_USERNAME=your_username
+FIWARE_PASSWORD=your_password
+
+# Multi-tenancy
 SERVICE=your_service
 SUBSERVICE=/your_subservice
+
+# Optional: STH, Perseo, IoT Agent (defaults to CB_HOST if not set)
+# STH_HOST=your-sth-host
+# CEP_HOST=your-cep-host
+# IOTA_HOST=your-iota-host
 ```
 
 ## Running the Server
@@ -108,47 +117,45 @@ To use your MCP server with external APIs (e.g., OpenAI Responses API) or share 
 > **Security Note**: Keep your auth token secure. The public URL is active only while ngrok is running.
 
 
-## 🔧 Available Tools & Resources
+## 🔧 Available Tools
 
-### Tools
+### Context Broker (Orion)
 
 | Tool | Description |
 |------|-------------|
-| `CB_version()` | Returns the Context Broker version (useful for connection testing) |
-| `fiware_request(method, endpoint, body)` | Executes any NGSI-v2 API call with automatic authentication |
-| `list_smart_data_model_domains()` | Lists all available Smart Data Model domains and their common models |
-| `get_smart_data_model(domain, model)` | Fetches complete schema with NGSI-v2 conversion examples |
+| `CB_version()` | Returns the Context Broker version (connection test) |
+| `fiware_request(method, endpoint, body)` | Execute any NGSI-v2 API call |
 
-The generic `fiware_request` tool gives you full access to the NGSI-v2 API without needing dedicated tools for each operation.
+### STH-Comet (Historical Data)
 
-#### Smart Data Models Tools
+| Tool | Description |
+|------|-------------|
+| `sth_get_history(entity_type, entity_id, attribute, last_n, date_from, date_to)` | Get raw historical values |
+| `sth_get_aggregation(entity_type, entity_id, attribute, aggr_method, aggr_period, date_from, date_to)` | Get aggregated data (min/max/sum by hour/day/month) |
 
-**Discover available models:**
-```python
-# List all domains and their models
-list_smart_data_model_domains()
-# Returns: Environment, Weather, Alert, Building, Transportation, etc.
-```
+### Perseo CEP (Rules Engine)
 
-**Get detailed schema with NGSI-v2 conversion:**
-```python
-# Get complete schema with conversion examples
-get_smart_data_model("Environment", "AirQualityObserved")
+| Tool | Description |
+|------|-------------|
+| `cep_list_rules()` | List all configured rules |
+| `cep_create_rule(name, epl_text, action_type, action_params)` | Create a new rule |
+| `cep_delete_rule(rule_name)` | Delete a rule |
 
-# Returns:
-# - All properties with NGSI-v2 type mapping
-# - Required fields
-# - NGSI-v2 conversion example
-# - Official example (if available)
-# - Links to documentation
-```
+### IoT Agents
 
-**Key improvements:**
-- ✅ Automatic type mapping (string → Text, number → Number, etc.)
-- ✅ Special handling for geo properties (location → geo:json)
-- ✅ Complete property list (not limited to 15)
-- ✅ NGSI-v2 conversion examples generated from schema
-- ✅ Required fields highlighted
+| Tool | Description |
+|------|-------------|
+| `iota_list_devices()` | List all registered devices |
+| `iota_register_device(device_id, entity_name, entity_type, attributes, protocol, transport)` | Register a new device |
+| `iota_delete_device(device_id, protocol)` | Delete a device |
+| `iota_list_services()` | List IoT Agent service configurations |
+
+### Smart Data Models
+
+| Tool | Description |
+|------|-------------|
+| `list_smart_data_model_domains()` | List available domains and models |
+| `get_smart_data_model(domain, model)` | Get schema with NGSI-v2 conversion examples |
 
 **Learn more**: https://smartdatamodels.org/
 
@@ -160,47 +167,72 @@ get_smart_data_model("Environment", "AirQualityObserved")
 
 The resource contains a comprehensive collection of FIWARE API examples that AI assistants can read to understand request formats, authentication patterns, and response structures. This enables the AI to provide accurate guidance when working with FIWARE APIs.
 
-### Prompts
-
-| Prompt | Description |
-|--------|-------------|
-| `create_fiware_entity` | Step-by-step guide to create entities using Smart Data Models |
-| `query_fiware_entities` | Guide to query entities with filters and examples |
-| `use_smart_data_models` | Complete guide to Smart Data Models usage |
-
-Prompts provide guided workflows that leverage the available tools and resources.
-
 ## 💡 Usage Examples
 
-**List all entities:**
+### Context Broker
+
 ```python
+# List all entities
 fiware_request("GET", "/v2/entities")
-```
 
-**Query with filters:**
-```python
-fiware_request("GET", "/v2/entities?type=Room&limit=10")
-```
+# Query with filters
+fiware_request("GET", "/v2/entities?type=AirQualityObserved&limit=10")
 
-**Create an entity:**
-```python
+# Create an entity
 fiware_request("POST", "/v2/entities", {
     "id": "Room:001",
     "type": "Room",
     "temperature": {"value": 23, "type": "Number"}
 })
-```
 
-**Update attributes:**
-```python
+# Update attributes
 fiware_request("PATCH", "/v2/entities/Room:001/attrs", {
     "temperature": {"value": 25}
 })
 ```
 
-**Delete an entity:**
+### Historical Data (STH)
+
 ```python
-fiware_request("DELETE", "/v2/entities/Room:001")
+# Get last 100 temperature readings
+sth_get_history("Room", "Room:001", "temperature", last_n=100)
+
+# Get daily max temperature for January
+sth_get_aggregation("Room", "Room:001", "temperature", "max", "day",
+                    date_from="2026-01-01T00:00:00Z", date_to="2026-01-31T23:59:59Z")
+```
+
+### Rules Engine (Perseo CEP)
+
+```python
+# List current rules
+cep_list_rules()
+
+# Create alert rule for high temperature
+cep_create_rule(
+    name="HighTempAlert",
+    epl_text='select *,"HighTempAlert" as ruleName from pattern [every ev=iotEvent((cast(`type`?, String) = "Room") AND (cast(cast(`temperature`?, String), float) > 30))]',
+    action_type="post",
+    action_params={"url": "http://your-webhook.com/alerts"}
+)
+```
+
+### IoT Devices
+
+```python
+# List all devices
+iota_list_devices()
+
+# Register a new sensor
+iota_register_device(
+    device_id="sensor001",
+    entity_name="Room:001",
+    entity_type="Room",
+    attributes=[
+        {"object_id": "t", "name": "temperature", "type": "Number"},
+        {"object_id": "h", "name": "humidity", "type": "Number"}
+    ]
+)
 ```
 
 ## ⚙️ Integration
@@ -267,14 +299,15 @@ Install the [MCP extension](https://marketplace.visualstudio.com/items?itemName=
     "fiware": {
       "command": "uv",
       "args": [
-        "run", "--with", "fastmcp>=2.0.0", "--with", "requests", "--with", "python-dotenv",
+        "run", "--with", "fastmcp>=2.0.0,<3", "--with", "requests", "--with", "python-dotenv",
         "python", "/path/to/server.py"
       ],
       "env": {
-        "AUTH_HOST": "your-keystone-host",
+        "AUTH_TYPE": "oauth",
+        "AUTH_HOST": "your-auth-host",
         "CB_HOST": "your-context-broker-host",
-        "USERNAME": "your_username",
-        "PASSWORD": "your_password",
+        "FIWARE_USERNAME": "your_username",
+        "FIWARE_PASSWORD": "your_password",
         "SERVICE": "your_service",
         "SUBSERVICE": "/your_subservice"
       }
@@ -285,11 +318,22 @@ Install the [MCP extension](https://marketplace.visualstudio.com/items?itemName=
 
 You can also add this to `.vscode/settings.json` in your project root for workspace-specific configuration.
 
+## Supported Architectures
+
+This server works with any FIWARE NGSI-v2 deployment:
+
+| Platform | Auth Type | Notes |
+|----------|-----------|-------|
+| **Telefonica IoT Platform** | `oauth` | OpenStack Keystone authentication |
+| **Linode / Self-hosted** | `basic` | HTTP Basic Auth |
+| **Local Docker** | `none` | No authentication required |
+
+Configure via `.env` file — see `.env.example` for all options.
+
 ## Requirements
 
 - Python 3.8+
-- Access to a FIWARE Context Broker (Orion) with NGSI-v2 API
-- OpenStack Keystone credentials (if authentication is enabled on your platform)
+- Access to a FIWARE platform (Context Broker required; STH, Perseo, IoT Agents optional)
 
 ## Error Handling
 
@@ -316,7 +360,7 @@ The project demonstrates how AI assistants can interact with FIWARE-based IoT pl
 
 ## 🙏 Acknowledgments
 
-This project builds upon the original work by [dncampo](https://github.com/dncampo/FIWARE-MCP-Server).
+This project was inspired by [dncampo/FIWARE-MCP-Server](https://github.com/dncampo/FIWARE-MCP-Server) (NGSI-LD implementation).
 
 Special thanks to:
 - **Oscar Rived** (<oscar@larraby.com>) and **Julen Ardaiz** (<julen@larraby.com>) - [Larraby](https://www.larraby.com/)

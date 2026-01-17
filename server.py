@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-FIWARE MCP Server - NGSI-v2 API with OAuth Authentication
+FIWARE MCP Server - NGSI-v2 API with Multiple Authentication Methods
 
 Original: https://github.com/dncampo/FIWARE-MCP-Server (NGSI-LD, no auth)
-This fork: NGSI-v2 + OpenStack Keystone authentication
+This fork: NGSI-v2 + Multiple authentication methods (OAuth, Basic Auth, None)
 """
 
 import os
@@ -12,25 +12,47 @@ import sys
 import argparse
 from typing import Optional
 import requests
+from requests.auth import HTTPBasicAuth
 from fastmcp import FastMCP
 from dotenv import load_dotenv
+from pathlib import Path
 import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-load_dotenv()
+
+# Load .env from the MCP's directory
+env_path = Path(__file__).parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 mcp = FastMCP("FIWARE Context Broker Assistant")
 
 # Configuration from .env
+AUTH_TYPE = os.getenv("AUTH_TYPE", "oauth").lower()  # oauth, basic, or none
 AUTH_HOST = os.getenv("AUTH_HOST", "localhost")
 AUTH_PORT = os.getenv("AUTH_PORT", "15001")
 CB_HOST = os.getenv("CB_HOST", "localhost")
 CB_PORT = os.getenv("CB_PORT", "1026")
-USERNAME = os.getenv("USERNAME", "")
-PASSWORD = os.getenv("PASSWORD", "")
+CB_PROTOCOL = os.getenv("CB_PROTOCOL", "https")  # http or https
+USERNAME = os.getenv("FIWARE_USERNAME", "")
+PASSWORD = os.getenv("FIWARE_PASSWORD", "")
 SERVICE = os.getenv("SERVICE", "")
 SUBSERVICE = os.getenv("SUBSERVICE", "/")
 AUTH_TOKEN = os.getenv("AUTH_TOKEN", "")
+
+# STH-Comet (Historical Data)
+STH_HOST = os.getenv("STH_HOST", CB_HOST)  # Default to CB_HOST for single-server setups
+STH_PORT = os.getenv("STH_PORT", "8666")
+
+# Perseo CEP (Rules Engine)
+CEP_HOST = os.getenv("CEP_HOST", CB_HOST)
+CEP_PORT = os.getenv("CEP_PORT", "9090")
+
+# IoT Agent Manager
+IOTA_HOST = os.getenv("IOTA_HOST", CB_HOST)
+IOTA_PORT = os.getenv("IOTA_PORT", "4041")
+
+# Debug log
+print(f"[FIWARE-MCP] AUTH_TYPE={AUTH_TYPE}, CB_HOST={CB_HOST}:{CB_PORT}, PROTOCOL={CB_PROTOCOL}", file=sys.stderr)
 
 _token_cache = AUTH_TOKEN if AUTH_TOKEN else None
 
@@ -79,161 +101,65 @@ def get_auth_token() -> Optional[str]:
 
 
 def make_request(method: str, url: str, body: dict = None) -> requests.Response:
-    """Make authenticated request with auto token refresh on 401"""
+    """Make authenticated request based on AUTH_TYPE"""
     headers = {
         "Accept": "application/json",
-        "fiware-service": SERVICE,
-        "fiware-servicepath": SUBSERVICE,
+        "Fiware-Service": SERVICE,
+        "Fiware-ServicePath": SUBSERVICE,
     }
-    
-    token = get_auth_token()
-    if token:
-        headers["x-auth-token"] = token
     
     if method.upper() in ["POST", "PUT", "PATCH"]:
         headers["Content-Type"] = "application/json"
     
-    response = requests.request(method, url, headers=headers, json=body, timeout=10, verify=False)
+    # Determine authentication method
+    auth = None
+    verify_ssl = False
     
-    if response.status_code == 401:
-        print("Token expired, refreshing...", file=sys.stderr)
-        refresh_token()
-        headers["x-auth-token"] = get_auth_token()
-        response = requests.request(method, url, headers=headers, json=body, timeout=10, verify=False)
+    if AUTH_TYPE == "oauth":
+        # OAuth with OpenStack Keystone
+        token = get_auth_token()
+        if token:
+            headers["x-auth-token"] = token
+        response = requests.request(method, url, headers=headers, json=body, timeout=10, verify=verify_ssl)
+        
+        # Auto-refresh token on 401
+        if response.status_code == 401:
+            print("Token expired, refreshing...", file=sys.stderr)
+            refresh_token()
+            headers["x-auth-token"] = get_auth_token()
+            response = requests.request(method, url, headers=headers, json=body, timeout=10, verify=verify_ssl)
+        
+        return response
     
-    return response
+    elif AUTH_TYPE == "basic":
+        # HTTP Basic Authentication
+        auth = HTTPBasicAuth(USERNAME, PASSWORD)
+        return requests.request(method, url, headers=headers, json=body, auth=auth, timeout=10, verify=verify_ssl)
+    
+    elif AUTH_TYPE == "none":
+        # No authentication
+        return requests.request(method, url, headers=headers, json=body, timeout=10, verify=verify_ssl)
+    
+    else:
+        raise ValueError(f"Invalid AUTH_TYPE: {AUTH_TYPE}. Must be 'oauth', 'basic', or 'none'.")
 
 
 @mcp.resource("fiware://examples")
 def get_api_examples() -> str:
     """FIWARE NGSI-v2 API example collection (Postman format)"""
     try:
-        with open("postman/fiware-ngsi-v2-examples.json", "r", encoding="utf-8") as f:
+        with open("resources/fiware-ngsi-v2-examples.json", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return json.dumps({"error": "Example collection not found"})
-
-
-@mcp.prompt()
-def create_fiware_entity():
-    """Guide to create a FIWARE entity following Smart Data Models"""
-    return """To create a FIWARE-compliant entity:
-
-1. **Find the right Smart Data Model:**
-   Use: get_smart_data_model(domain, model)
-   
-   Common models:
-   - Environment: AirQualityObserved, NoiseLevelObserved, WaterQualityObserved
-   - Weather: WeatherObserved, WeatherForecast
-   - Alert: Alert, Anomaly
-   - Building: Building, BuildingOperation
-   
-   Example: get_smart_data_model("Environment", "AirQualityObserved")
-
-2. **Check the Postman examples:**
-   Read resource: fiware://examples
-   Look for similar entity creation examples
-
-3. **Create the entity in NGSI-v2 format:**
-   Use: fiware_request("POST", "/v2/entities", entity_data)
-   
-   Format: {"id": "Type:ID", "type": "Type", "attr": {"value": X, "type": "Number|Text"}}
-
-4. **Required attributes from Smart Data Model:**
-   - Always include: id, type
-   - Check 'required' field from get_smart_data_model output
-   - Use proper NGSI-v2 attribute format
-
-Remember: Smart Data Models ensure interoperability across FIWARE platforms!
-"""
-
-
-@mcp.prompt()
-def query_fiware_entities():
-    """Guide to query FIWARE entities effectively"""
-    return """To query FIWARE entities:
-
-1. **Check available examples:**
-   Read resource: fiware://examples
-   Section: "GET /v2/entities" examples
-
-2. **Basic queries:**
-   - List all: fiware_request("GET", "/v2/entities")
-   - By type: fiware_request("GET", "/v2/entities?type=Room")
-   - By ID: fiware_request("GET", "/v2/entities/Room:001")
-
-3. **Advanced filtering:**
-   - Attribute filter: ?q=temperature>20
-   - Select attributes: ?attrs=temperature,pressure
-   - Pagination: ?limit=10&offset=20
-   - Ordering: ?orderBy=temperature
-
-4. **Geospatial queries:**
-   - Near point: ?georel=near;maxDistance:1000&geometry=point&coords=-1.64,42.81
-   - Within area: ?georel=coveredBy&geometry=polygon&coords=...
-
-5. **Get entity types:**
-   fiware_request("GET", "/v2/types")
-
-Check the Postman collection (fiware://examples) for complete request examples!
-"""
-
-
-@mcp.prompt()
-def use_smart_data_models():
-    """Guide to using Smart Data Models in FIWARE"""
-    return """Smart Data Models ensure your entities are interoperable and standardized.
-
-**Step 1: Browse available models**
-Use: get_smart_data_model(domain, model)
-
-**Available domains:**
-- Environment (air quality, water, noise, weather)
-- Alert (alerts, anomalies, warnings)
-- Weather (observations, forecasts)
-- Building (structures, operations)
-- Transportation (traffic, vehicles, roads)
-- UrbanMobility (public transport, GTFS)
-- WasteManagement (containers, collection)
-- Streetlighting (lights, control cabinets)
-- Energy (consumption, generation)
-- ParksAndGardens (green spaces)
-
-**Step 2: Get model details**
-Example: get_smart_data_model("Environment", "AirQualityObserved")
-
-Returns:
-- Description and purpose
-- Required attributes
-- Available properties
-- Example entity
-- Link to full documentation
-
-**Step 3: Convert to NGSI-v2**
-Smart Data Models use JSON Schema. Convert to NGSI-v2:
-
-Schema: "pm25": {"type": "number"}
-NGSI-v2: "pm25": {"value": 12.5, "type": "Number"}
-
-**Step 4: Create entity**
-Use: fiware_request("POST", "/v2/entities", your_entity)
-
-**Why use Smart Data Models?**
-- Interoperability across platforms
-- Standardized attributes
-- Community-validated schemas
-- Better data sharing
-
-Learn more: https://smartdatamodels.org/
-"""
 
 
 @mcp.tool()
 def CB_version() -> str:
     """Check Context Broker version"""
     try:
-        url = f"https://{CB_HOST}:{CB_PORT}/version"
-        response = requests.get(url, headers={"Accept": "application/json"}, timeout=10, verify=False)
+        url = f"{CB_PROTOCOL}://{CB_HOST}:{CB_PORT}/version"
+        response = make_request("GET", url)
         return json.dumps({"success": True, "version": response.json()}, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -287,7 +213,7 @@ def fiware_request(method: str, endpoint: str, body: dict = None) -> str:
         POST /v2/op/query                          - Batch query (with body)
     """
     try:
-        url = f"https://{CB_HOST}:{CB_PORT}{endpoint}"
+        url = f"{CB_PROTOCOL}://{CB_HOST}:{CB_PORT}{endpoint}"
         response = make_request(method.upper(), url, body)
         
         try:
@@ -317,6 +243,419 @@ def fiware_request(method: str, endpoint: str, body: dict = None) -> str:
     except Exception as e:
         return json.dumps({"error": str(e)})
 
+
+# =============================================================================
+# STH-COMET - Historical Data
+# =============================================================================
+
+@mcp.tool()
+def sth_get_history(entity_type: str, entity_id: str, attribute: str,
+                    last_n: int = 20, date_from: str = None, date_to: str = None) -> str:
+    """
+    Get historical raw values for an entity attribute from STH-Comet.
+    
+    Args:
+        entity_type: Entity type (e.g., "AirQualityObserved")
+        entity_id: Entity ID (e.g., "AirQualityObserved:Pamplona:001")
+        attribute: Attribute name (e.g., "pm25", "temperature")
+        last_n: Number of last values to retrieve (default 20)
+        date_from: Start date ISO format (e.g., "2026-01-01T00:00:00.000Z")
+        date_to: End date ISO format (e.g., "2026-01-17T23:59:59.999Z")
+    
+    Returns:
+        Historical values with timestamps
+    
+    Example:
+        sth_get_history("AirQualityObserved", "sensor:001", "pm25", last_n=100)
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{STH_HOST}:{STH_PORT}/STH/v1/contextEntities/type/{entity_type}/id/{entity_id}/attributes/{attribute}"
+        
+        params = []
+        if date_from:
+            params.append(f"dateFrom={date_from}")
+        if date_to:
+            params.append(f"dateTo={date_to}")
+        params.append(f"lastN={last_n}")
+        
+        if params:
+            url += "?" + "&".join(params)
+        
+        response = make_request("GET", url)
+        
+        try:
+            data = response.json() if response.text else None
+        except:
+            data = response.text
+        
+        result = {
+            "success": response.ok,
+            "status_code": response.status_code,
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "attribute": attribute,
+        }
+        
+        if response.ok:
+            result["data"] = data
+            # Extract values count if available
+            if data and "contextResponses" in data:
+                try:
+                    values = data["contextResponses"][0]["contextElement"]["attributes"][0]["values"]
+                    result["values_count"] = len(values)
+                except:
+                    pass
+        else:
+            result["error"] = data or response.reason
+        
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+def sth_get_aggregation(entity_type: str, entity_id: str, attribute: str,
+                        aggr_method: str, aggr_period: str,
+                        date_from: str = None, date_to: str = None) -> str:
+    """
+    Get aggregated historical data from STH-Comet.
+    
+    Args:
+        entity_type: Entity type (e.g., "AirQualityObserved")
+        entity_id: Entity ID
+        attribute: Attribute name (e.g., "temperature")
+        aggr_method: Aggregation method: "max", "min", "sum", "sum2" (for std dev)
+        aggr_period: Aggregation period: "hour", "day", "month"
+        date_from: Start date ISO format
+        date_to: End date ISO format
+    
+    Returns:
+        Aggregated values by period
+    
+    Example:
+        sth_get_aggregation("WeatherObserved", "sensor:001", "temperature", "max", "hour")
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{STH_HOST}:{STH_PORT}/STH/v1/contextEntities/type/{entity_type}/id/{entity_id}/attributes/{attribute}"
+        
+        params = [f"aggrMethod={aggr_method}", f"aggrPeriod={aggr_period}"]
+        if date_from:
+            params.append(f"dateFrom={date_from}")
+        if date_to:
+            params.append(f"dateTo={date_to}")
+        
+        url += "?" + "&".join(params)
+        
+        response = make_request("GET", url)
+        
+        try:
+            data = response.json() if response.text else None
+        except:
+            data = response.text
+        
+        result = {
+            "success": response.ok,
+            "status_code": response.status_code,
+            "aggregation": {
+                "method": aggr_method,
+                "period": aggr_period
+            }
+        }
+        
+        if response.ok:
+            result["data"] = data
+        else:
+            result["error"] = data or response.reason
+        
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# PERSEO CEP - Complex Event Processing
+# =============================================================================
+
+@mcp.tool()
+def cep_list_rules() -> str:
+    """
+    List all CEP rules in Perseo.
+    
+    Returns:
+        List of configured rules with their definitions
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{CEP_HOST}:{CEP_PORT}/rules"
+        response = make_request("GET", url)
+        
+        try:
+            data = response.json() if response.text else None
+        except:
+            data = response.text
+        
+        result = {
+            "success": response.ok,
+            "status_code": response.status_code,
+        }
+        
+        if response.ok:
+            result["data"] = data
+            if isinstance(data, dict) and "data" in data:
+                result["rules_count"] = len(data.get("data", []))
+        else:
+            result["error"] = data or response.reason
+        
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+def cep_create_rule(name: str, epl_text: str, action_type: str, action_params: dict) -> str:
+    """
+    Create a new CEP rule in Perseo.
+    
+    Args:
+        name: Rule name (unique identifier)
+        epl_text: EPL (Event Processing Language) query
+        action_type: Action type: "email", "update", "post", "sms"
+        action_params: Action parameters (depends on action_type)
+    
+    Action parameters by type:
+        email: {"to": "email@example.com", "from": "noreply@...", "subject": "..."}
+        update: {"id": "entity_id", "type": "entity_type", "attributes": [{"name": "...", "value": "..."}]}
+        post: {"url": "http://..."}
+    
+    EPL Example:
+        select *,"HighTemperature" as ruleName from pattern [every ev=iotEvent(
+            (cast(`type`?, String) = "Room") AND 
+            (cast(cast(`temperature`?, String), float) > 30)
+        )]
+    
+    Returns:
+        Created rule confirmation
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{CEP_HOST}:{CEP_PORT}/rules"
+        
+        body = {
+            "name": name,
+            "text": epl_text,
+            "action": {
+                "type": action_type,
+                "parameters": action_params
+            }
+        }
+        
+        # Add template if provided in params
+        if "template" in action_params:
+            body["action"]["template"] = action_params.pop("template")
+        
+        response = make_request("POST", url, body)
+        
+        try:
+            data = response.json() if response.text else None
+        except:
+            data = response.text
+        
+        return json.dumps({
+            "success": response.ok,
+            "status_code": response.status_code,
+            "rule_name": name,
+            "data": data if response.ok else None,
+            "error": data if not response.ok else None
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+def cep_delete_rule(rule_name: str) -> str:
+    """
+    Delete a CEP rule from Perseo.
+    
+    Args:
+        rule_name: Name of the rule to delete
+    
+    Returns:
+        Deletion confirmation
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{CEP_HOST}:{CEP_PORT}/rules/{rule_name}"
+        response = make_request("DELETE", url)
+        
+        return json.dumps({
+            "success": response.ok,
+            "status_code": response.status_code,
+            "deleted_rule": rule_name if response.ok else None,
+            "error": response.text if not response.ok else None
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# IOT AGENTS - Device Management
+# =============================================================================
+
+@mcp.tool()
+def iota_list_devices() -> str:
+    """
+    List all registered IoT devices.
+    
+    Returns:
+        List of devices with their configurations
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{IOTA_HOST}:{IOTA_PORT}/iot/devices"
+        response = make_request("GET", url)
+        
+        try:
+            data = response.json() if response.text else None
+        except:
+            data = response.text
+        
+        result = {
+            "success": response.ok,
+            "status_code": response.status_code,
+        }
+        
+        if response.ok:
+            result["data"] = data
+            if isinstance(data, dict) and "devices" in data:
+                result["devices_count"] = len(data.get("devices", []))
+        else:
+            result["error"] = data or response.reason
+        
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+def iota_register_device(device_id: str, entity_name: str, entity_type: str,
+                         attributes: list, protocol: str = "IoTA-UL",
+                         transport: str = "HTTP") -> str:
+    """
+    Register a new IoT device.
+    
+    Args:
+        device_id: Unique device identifier
+        entity_name: Entity name in Context Broker
+        entity_type: Entity type (e.g., "Room", "Sensor")
+        attributes: List of attribute mappings [{"object_id": "t", "name": "temperature", "type": "float"}]
+        protocol: "IoTA-UL" (UltraLight) or "IoTA-JSON"
+        transport: "HTTP" or "MQTT"
+    
+    Returns:
+        Registration confirmation
+    
+    Example:
+        iota_register_device(
+            device_id="sensor001",
+            entity_name="Room:001",
+            entity_type="Room",
+            attributes=[
+                {"object_id": "t", "name": "temperature", "type": "float"},
+                {"object_id": "h", "name": "humidity", "type": "float"}
+            ]
+        )
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{IOTA_HOST}:{IOTA_PORT}/iot/devices"
+        
+        device = {
+            "device_id": device_id,
+            "entity_name": entity_name,
+            "entity_type": entity_type,
+            "attributes": attributes,
+            "protocol": protocol,
+            "transport": transport
+        }
+        
+        body = {"devices": [device]}
+        
+        response = make_request("POST", url, body)
+        
+        try:
+            data = response.json() if response.text else None
+        except:
+            data = response.text
+        
+        return json.dumps({
+            "success": response.ok,
+            "status_code": response.status_code,
+            "device_id": device_id,
+            "data": data if response.ok else None,
+            "error": data if not response.ok else None
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+def iota_delete_device(device_id: str, protocol: str = "IoTA-UL") -> str:
+    """
+    Delete/deregister an IoT device.
+    
+    Args:
+        device_id: Device identifier to delete
+        protocol: Protocol type ("IoTA-UL" or "IoTA-JSON")
+    
+    Returns:
+        Deletion confirmation
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{IOTA_HOST}:{IOTA_PORT}/iot/devices/{device_id}?protocol={protocol}"
+        response = make_request("DELETE", url)
+        
+        return json.dumps({
+            "success": response.ok,
+            "status_code": response.status_code,
+            "deleted_device": device_id if response.ok else None,
+            "error": response.text if not response.ok else None
+        }, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@mcp.tool()
+def iota_list_services() -> str:
+    """
+    List all provisioned IoT Agent service configurations.
+    
+    Returns:
+        List of service groups with their API keys and configurations
+    """
+    try:
+        url = f"{CB_PROTOCOL}://{IOTA_HOST}:{IOTA_PORT}/iot/services"
+        response = make_request("GET", url)
+        
+        try:
+            data = response.json() if response.text else None
+        except:
+            data = response.text
+        
+        result = {
+            "success": response.ok,
+            "status_code": response.status_code,
+        }
+        
+        if response.ok:
+            result["data"] = data
+            if isinstance(data, dict) and "services" in data:
+                result["services_count"] = len(data.get("services", []))
+        else:
+            result["error"] = data or response.reason
+        
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+# =============================================================================
+# SMART DATA MODELS
+# =============================================================================
 
 @mcp.tool()
 def list_smart_data_model_domains() -> str:

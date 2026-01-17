@@ -1,7 +1,29 @@
+# Environment
 .env
+
+# Python
 __pycache__/
 *.pyc
-test_resource.py
-ThinkingCities*.json
-sdmenvironment.postman_environment.json
-*environment.postman_environment.json
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test files
+test_*.py
+
+# Postman environments (contain credentials)
+*.postman_environment.json
